@@ -265,6 +265,11 @@ def get_cards_page():
     with open(os.path.join(STATIC_DIR, "cards.html"), "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
+@app.get("/manual")
+def get_manual_page():
+    with open(os.path.join(STATIC_DIR, "manual.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
