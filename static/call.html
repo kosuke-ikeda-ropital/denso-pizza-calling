@@ -233,6 +233,15 @@
       }
     }
 
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {}
+      }
+    }
+
     function enableSoundNotification() {
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -243,6 +252,7 @@
       soundEnabled = true;
       playChime();
       triggerVibration();
+      requestWakeLock(); // 自動スリープも可能な限り防止
       document.getElementById('soundPermissionBanner').classList.add('hidden');
     }
 
@@ -357,6 +367,27 @@
     fetchState();
     // フォールバックポーリング (5秒おき)
     setInterval(fetchState, 5000);
+
+    // ========================================================
+    // 画面復帰時の即時チェック＆爆音トリガー (スリープ解除対策)
+    // ========================================================
+    async function handleScreenResume() {
+      if (document.visibilityState === 'visible') {
+        // AudioContextの停止を解除
+        if (audioContext && audioContext.state === 'suspended') {
+          try {
+            await audioContext.resume();
+          } catch (e) {}
+        }
+        // 即座に最新状態を取得
+        await fetchState();
+      }
+    }
+
+    // 画面点灯・タブ復帰・ロック解除イベントを全網羅で監視
+    document.addEventListener('visibilitychange', handleScreenResume);
+    window.addEventListener('focus', handleScreenResume);
+    window.addEventListener('pageshow', handleScreenResume);
   </script>
 </body>
 </html>
