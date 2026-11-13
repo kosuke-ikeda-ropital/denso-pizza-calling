@@ -241,8 +241,8 @@ def export_csv(pin: Optional[str] = None, x_staff_pin: Optional[str] = Header(No
     output.write('\ufeff')
     writer = csv.writer(output)
 
-    # ヘッダー行
-    writer.writerow(["注文ID", "注文日時", "整理番号", "商品名", "サイズ", "数量", "単価(円)", "小計(円)", "注文合計金額(円)", "ステータス", "備考"])
+    # ヘッダー行 (日時・IDは除外してスッキリシンプルに)
+    writer.writerow(["整理番号", "商品名", "サイズ", "数量", "単価(円)", "小計(円)", "注文合計金額(円)", "ステータス", "備考"])
 
     # 状態の日本語変換マップ
     status_map = {
@@ -255,14 +255,6 @@ def export_csv(pin: Optional[str] = None, x_staff_pin: Optional[str] = Header(No
     total_sales = 0
 
     for o in orders:
-        created_time_str = ""
-        if o.get("created_at"):
-            try:
-                dt = datetime.datetime.fromtimestamp(o["created_at"])
-                created_time_str = dt.strftime("%Y/%m/%d %H:%M:%S")
-            except Exception:
-                created_time_str = str(o["created_at"])
-
         num_str = f"{o['number']:02d}"
         status_str = status_map.get(o.get("status"), o.get("status", ""))
         order_total = o.get("total_price", 0)
@@ -272,7 +264,7 @@ def export_csv(pin: Optional[str] = None, x_staff_pin: Optional[str] = Header(No
         items = o.get("items", [])
         if not items:
             writer.writerow([
-                o["id"], created_time_str, num_str, "(なし)", "-", 0, 0, 0, order_total, status_str, o.get("note", "")
+                num_str, "(なし)", "-", 0, 0, 0, order_total, status_str, o.get("note", "")
             ])
         else:
             for idx, item in enumerate(items):
@@ -285,8 +277,6 @@ def export_csv(pin: Optional[str] = None, x_staff_pin: Optional[str] = Header(No
                 displayed_note = o.get("note", "") if idx == 0 else ""
 
                 writer.writerow([
-                    o["id"],
-                    created_time_str,
                     num_str,
                     item.get("pizza_name", ""),
                     size_str,
@@ -300,7 +290,7 @@ def export_csv(pin: Optional[str] = None, x_staff_pin: Optional[str] = Header(No
 
     # 最終集計行
     writer.writerow([])
-    writer.writerow(["【売上集計】", "", "", "", "", "", "受取完了売上合計", f"¥{total_sales:,}"])
+    writer.writerow(["【売上集計】", "", "", "", "受取完了売上合計", f"¥{total_sales:,}"])
 
     output.seek(0)
     csv_bytes = output.getvalue().encode('utf-8-sig')
