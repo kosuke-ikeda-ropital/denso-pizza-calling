@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ピザ焼き上がり呼出ベル</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes bounce-slow {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes pulse-intense {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.7); }
+      50% { transform: scale(1.05); box-shadow: 0 0 30px 10px rgba(234, 88, 12, 0.9); }
+    }
+    @keyframes flash-bg {
+      0%, 100% { background-color: #ea580c; }
+      50% { background-color: #f97316; }
+    }
+    .calling-bg {
+      animation: flash-bg 1s infinite alternate;
+    }
+    .calling-card {
+      animation: pulse-intense 1.2s infinite ease-in-out;
+    }
+    .pizza-spin {
+      animation: spin 20s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col items-center justify-between p-4 selection:bg-amber-500">
+
+  <!-- ヘッダー -->
+  <header class="w-full max-w-md flex items-center justify-between py-2 border-b border-slate-800">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🍕</span>
+      <span class="font-bold text-amber-400 text-sm tracking-wide" id="shopName">学祭ピザスタンド</span>
+    </div>
+    <div id="connStatus" class="text-xs text-slate-400 flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 接続中
+    </div>
+  </header>
+
+  <!-- 音声・バイブ許可バナー（初回必須） -->
+  <div id="soundPermissionBanner" class="w-full max-w-md my-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-lg flex items-center justify-between border-2 border-amber-300">
+    <div class="flex items-center gap-3">
+      <div class="text-2xl animate-bounce"><i class="fa-solid fa-volume-high"></i></div>
+      <div class="text-xs">
+        <p class="font-black text-sm">通知音をONにしてください</p>
+        <p class="text-amber-100">焼き上がりの呼出音・振動を鳴らせます</p>
+      </div>
+    </div>
+    <button onclick="enableSoundNotification()" class="bg-white text-orange-600 font-extrabold text-xs px-3.5 py-2 rounded-xl shadow active:scale-95 transition">
+      ONにする
+    </button>
+  </div>
+
+  <!-- メイン表示領域 -->
+  <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center py-4 text-center">
+
+    <!-- 番号表示バッジ -->
+    <div class="inline-block bg-slate-800/80 backdrop-blur rounded-2xl px-6 py-2 border border-slate-700 shadow-md mb-4">
+      <span class="text-xs text-slate-400 block font-semibold">お呼び出し番号</span>
+      <span class="text-5xl font-black text-amber-400 tracking-wider" id="displayNumber">--</span>
+    </div>
+
+    <!-- ステータス動的カード -->
+    <div id="statusContainer" class="w-full">
+
+      <!-- 状態1: 焼き中（待機中） -->
+      <div id="stateWaiting" class="bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-700 space-y-5">
+        <div class="relative w-28 h-28 mx-auto flex items-center justify-center">
+          <div class="absolute inset-0 bg-amber-500/20 rounded-full animate-ping"></div>
+          <div class="text-6xl pizza-spin">🍕</div>
+        </div>
+        <div>
+          <h2 class="text-2xl font-black text-amber-400 mb-1">おいしく焼き上げ中</h2>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            ピザ窯で丁寧に焼き上げています。<br>焼き上がると画面と音・振動でお知らせします。
+          </p>
+        </div>
+        <div class="bg-slate-900/60 rounded-xl p-3 text-xs text-slate-400 border border-slate-700/60">
+          💡 この画面を開いたまま、近くでお待ちください
+        </div>
+      </div>
+
+      <!-- 状態2: 焼き上がり！（呼出中・猛烈にアピール） -->
+      <div id="stateCalling" class="hidden calling-bg rounded-3xl p-6 shadow-2xl border-4 border-yellow-300 calling-card space-y-4">
+        <div class="text-6xl animate-bounce">🔔</div>
+        <div>
+          <h2 class="text-3xl font-black text-yellow-200 tracking-tight leading-tight">
+            ピザが焼き上がりました！
+          </h2>
+          <p class="text-white text-base font-bold mt-2">
+            受取口（ピザ屋ブース）まで<br>番号札を持ってお越しください！
+          </p>
+        </div>
+        <button onclick="stopAlarm()" class="w-full bg-white text-orange-700 hover:bg-yellow-100 font-black text-lg py-3 rounded-2xl shadow-xl transition transform active:scale-95">
+          <i class="fa-solid fa-person-walking"></i> 今すぐ向かいます (音を止める)
+        </button>
+      </div>
+
+      <!-- 状態3: 受取完了 -->
+      <div id="stateCompleted" class="hidden bg-slate-800 rounded-3xl p-6 shadow-xl border border-emerald-500/50 space-y-4">
+        <div class="text-5xl text-emerald-400"><i class="fa-solid fa-circle-check"></i></div>
+        <h2 class="text-2xl font-black text-white">受取完了しました</h2>
+        <p class="text-slate-300 text-sm leading-relaxed">
+          お受け取りありがとうございます！<br>
+          熱々のおいしいピザをぜひお楽しみください🍕✨
+        </p>
+      </div>
+
+      <!-- 状態4: 注文なし / 終了 -->
+      <div id="stateNotFound" class="hidden bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-700 space-y-4">
+        <div class="text-4xl text-slate-500"><i class="fa-solid fa-receipt"></i></div>
+        <h2 class="text-lg font-bold text-slate-300">注文の待機中または終了しました</h2>
+        <p class="text-slate-400 text-xs">
+          番号札をお持ちの方は、注文が登録されるまで少々お待ちください。
+        </p>
+      </div>
+
+    </div>
+
+    <!-- 注文明細アコーディオン -->
+    <div id="orderItemsBox" class="w-full mt-4 bg-slate-800/60 rounded-2xl p-4 border border-slate-700/80 text-left text-xs hidden">
+      <div class="font-bold text-slate-300 mb-2 flex items-center justify-between">
+        <span>ご注文内容</span>
+        <span id="orderItemsTotal" class="text-amber-400 font-black text-sm"></span>
+      </div>
+      <div id="orderItemsList" class="space-y-1 text-slate-300">
+        <!-- JSで明細表示 -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- フッター -->
+  <footer class="w-full max-w-md text-center py-2 text-slate-500 text-xs">
+    学祭ピザ屋 呼び出しシステム
+  </footer>
+
+  <script>
+    // URLから整理番号を取得 (?num=XX)
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetNumber = parseInt(urlParams.get('num') || '0', 10);
+
+    const displayNumber = document.getElementById('displayNumber');
+    displayNumber.textContent = targetNumber > 0 ? (targetNumber < 10 ? '0' + targetNumber : targetNumber) : '--';
+
+    let audioContext = null;
+    let alarmInterval = null;
+    let soundEnabled = false;
+
+    // Web Audio APIによるチャイム音生成
+    function playChime() {
+      if (!audioContext) return;
+      try {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+
+        const now = audioContext.currentTime;
+        // ファ音(698Hz) -> ド音(523Hz) のようなチャイム
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(659, now + 0.25);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+        osc.start(now);
+        osc.stop(now + 0.8);
+      } catch (e) {
+        console.error("Audio error", e);
+      }
+    }
+
+    function triggerVibration() {
+      if ("vibrate" in navigator) {
+        try {
+          navigator.vibrate([500, 200, 500, 200, 500]);
+        } catch (e) {}
+      }
+    }
+
+    function startAlarm() {
+      if (alarmInterval) return;
+      playChime();
+      triggerVibration();
+      alarmInterval = setInterval(() => {
+        playChime();
+        triggerVibration();
+      }, 1500);
+    }
+
+    function stopAlarm() {
+      if (alarmInterval) {
+        clearInterval(alarmInterval);
+        alarmInterval = null;
+      }
+    }
+
+    function enableSoundNotification() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      soundEnabled = true;
+      playChime();
+      triggerVibration();
+      document.getElementById('soundPermissionBanner').classList.add('hidden');
+    }
+
+    // UI状態の更新
+    function updateStateUI(order) {
+      const stateWaiting = document.getElementById('stateWaiting');
+      const stateCalling = document.getElementById('stateCalling');
+      const stateCompleted = document.getElementById('stateCompleted');
+      const stateNotFound = document.getElementById('stateNotFound');
+      const itemsBox = document.getElementById('orderItemsBox');
+      const itemsList = document.getElementById('orderItemsList');
+      const itemsTotal = document.getElementById('orderItemsTotal');
+
+      stateWaiting.classList.add('hidden');
+      stateCalling.classList.add('hidden');
+      stateCompleted.classList.add('hidden');
+      stateNotFound.classList.add('hidden');
+
+      if (!order) {
+        stateNotFound.classList.remove('hidden');
+        itemsBox.classList.add('hidden');
+        stopAlarm();
+        return;
+      }
+
+      // 明細表示
+      if (order.items && order.items.length > 0) {
+        itemsBox.classList.remove('hidden');
+        itemsTotal.textContent = `¥${order.total_price.toLocaleString()}`;
+        itemsList.innerHTML = order.items.map(it => `
+          <div class="flex justify-between items-center py-0.5 border-b border-slate-700/40">
+            <span>${it.pizza_name} (${it.size === 'piece' ? 'ピース' : 'ホール'}) × ${it.quantity}</span>
+            <span class="font-semibold">¥${(it.quantity * it.unit_price).toLocaleString()}</span>
+          </div>
+        `).join('');
+      }
+
+      if (order.status === 'waiting') {
+        stateWaiting.classList.remove('hidden');
+        stopAlarm();
+      } else if (order.status === 'calling') {
+        stateCalling.classList.remove('hidden');
+        startAlarm();
+      } else if (order.status === 'completed') {
+        stateCompleted.classList.remove('hidden');
+        stopAlarm();
+      } else {
+        stateNotFound.classList.remove('hidden');
+        stopAlarm();
+      }
+    }
+
+    // データ取得
+    async function fetchState() {
+      if (targetNumber <= 0) {
+        updateStateUI(null);
+        return;
+      }
+      try {
+        const res = await fetch('/api/state');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (data.settings && data.settings.shop_name) {
+          document.getElementById('shopName').textContent = data.settings.shop_name;
+        }
+
+        // 最新の該当注文を探す（未完了優先）
+        const matchingOrders = data.orders.filter(o => o.number === targetNumber);
+        if (matchingOrders.length === 0) {
+          updateStateUI(null);
+        } else {
+          // waiting または calling があればそれを優先、なければ最新の completed
+          const active = matchingOrders.find(o => o.status === 'calling' || o.status === 'waiting');
+          if (active) {
+            updateStateUI(active);
+          } else {
+            updateStateUI(matchingOrders[matchingOrders.length - 1]);
+          }
+        }
+      } catch (e) {
+        console.error("fetchState error", e);
+      }
+    }
+
+    // WebSocket接続
+    function connectWS() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+      ws.onopen = () => {
+        document.getElementById('connStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 接続中';
+        fetchState();
+      };
+
+      ws.onmessage = (event) => {
+        fetchState();
+      };
+
+      ws.onclose = () => {
+        document.getElementById('connStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> 再接続中...';
+        setTimeout(connectWS, 2000);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    // 初期化
+    connectWS();
+    fetchState();
+    // フォールバックポーリング (5秒おき)
+    setInterval(fetchState, 5000);
+  </script>
+</body>
+</html>

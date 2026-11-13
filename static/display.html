@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>出来上がり状況 - 店頭モニター</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes pulse-card {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(249, 115, 22, 0.4); }
+      50% { transform: scale(1.03); box-shadow: 0 0 40px rgba(249, 115, 22, 0.8); }
+    }
+    .calling-badge {
+      animation: pulse-card 1.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-white font-sans min-h-screen flex flex-col justify-between p-6 select-none">
+
+  <!-- ヘッダー -->
+  <header class="flex items-center justify-between pb-4 border-b-2 border-slate-800">
+    <div class="flex items-center gap-4">
+      <span class="text-5xl">🍕</span>
+      <div>
+        <h1 class="text-3xl font-black text-amber-400 tracking-wider" id="shopTitle">学祭ピザスタンド</h1>
+        <p class="text-sm text-slate-400">番号札をお持ちのお客様は、番号が点灯しましたら受取口へお越しください</p>
+      </div>
+    </div>
+    <div class="text-right">
+      <div class="text-4xl font-mono font-bold text-white tracking-widest" id="clock">--:--</div>
+      <div class="text-xs text-emerald-400 font-semibold flex items-center justify-end gap-1 mt-1">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> リアルタイム更新中
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="grid grid-cols-1 lg:grid-cols-12 gap-8 my-6 flex-1">
+
+    <!-- 左側 (8カラム): 焼き上がり！お呼出中 -->
+    <div class="lg:col-span-8 bg-gradient-to-br from-orange-950/40 to-slate-900 rounded-3xl p-6 border-2 border-orange-500/80 flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-orange-800/60">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl text-orange-400 animate-bounce"><i class="fa-solid fa-bell"></i></span>
+          <h2 class="text-2xl font-black text-orange-300 tracking-wide">
+            焼き上がりました！受取口へお越しください
+          </h2>
+        </div>
+        <span class="bg-orange-600 text-white font-black px-4 py-1 rounded-full text-base" id="callingCount">0件</span>
+      </div>
+
+      <div id="callingGrid" class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 items-start content-start overflow-y-auto">
+        <!-- 呼出中の特大番号バッジ -->
+        <div class="col-span-full py-16 text-center text-slate-500 text-xl font-bold">
+          現在呼び出し中の番号はありません
+        </div>
+      </div>
+    </div>
+
+    <!-- 右側 (4カラム): 現在焼き中（調理中・待ち） -->
+    <div class="lg:col-span-4 bg-slate-900 rounded-3xl p-6 border border-slate-800 flex flex-col shadow-xl">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl text-amber-500"><i class="fa-solid fa-fire-burner"></i></span>
+          <h2 class="text-xl font-bold text-slate-200">
+            ただいま焼き中 (調理中)
+          </h2>
+        </div>
+        <span class="bg-amber-500/20 text-amber-300 font-bold px-3 py-1 rounded-full text-sm" id="waitingCount">0件</span>
+      </div>
+
+      <div id="waitingGrid" class="flex-1 flex flex-wrap gap-2.5 content-start overflow-y-auto">
+        <!-- 焼き待ちの番号 -->
+        <div class="w-full py-16 text-center text-slate-600 text-base">
+          現在、焼き待ちの注文はありません
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- フッター -->
+  <footer class="pt-2 text-center text-slate-500 text-sm">
+    ※ お手元のスマホ（番号札のQRコード）でも焼き上がり通知を受け取ることができます
+  </footer>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    async function fetchState() {
+      try {
+        const res = await fetch('/api/state');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.settings && data.settings.shop_name) {
+          document.getElementById('shopTitle').textContent = data.settings.shop_name;
+        }
+
+        const callingOrders = data.orders.filter(o => o.status === 'calling');
+        const waitingOrders = data.orders.filter(o => o.status === 'waiting');
+
+        document.getElementById('callingCount').textContent = `${callingOrders.length}件`;
+        document.getElementById('waitingCount').textContent = `${waitingOrders.length}件`;
+
+        // 呼出中グリッド
+        const callingGrid = document.getElementById('callingGrid');
+        if (callingOrders.length === 0) {
+          callingGrid.innerHTML = `
+            <div class="col-span-full py-20 text-center text-slate-500 text-xl font-bold">
+              現在、呼び出し中の番号はありません
+            </div>
+          `;
+        } else {
+          callingGrid.innerHTML = callingOrders.map(o => {
+            const numStr = o.number < 10 ? '0' + o.number : o.number;
+            return `
+              <div class="bg-gradient-to-b from-orange-500 to-amber-600 rounded-3xl p-5 text-center text-white shadow-2xl calling-badge border-4 border-yellow-200">
+                <div class="text-xs font-black tracking-widest text-orange-200 uppercase">呼出中</div>
+                <div class="text-6xl font-black my-1 tracking-wider">${numStr}</div>
+                <div class="text-xs bg-black/20 rounded-lg py-1 px-2 font-bold truncate">受取口へどうぞ！</div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // 焼き待ちグリッド
+        const waitingGrid = document.getElementById('waitingGrid');
+        if (waitingOrders.length === 0) {
+          waitingGrid.innerHTML = `
+            <div class="w-full py-16 text-center text-slate-600 text-base">
+              現在、焼き待ちの注文はありません
+            </div>
+          `;
+        } else {
+          waitingGrid.innerHTML = waitingOrders.map(o => {
+            const numStr = o.number < 10 ? '0' + o.number : o.number;
+            return `
+              <div class="bg-slate-800 border border-slate-700 text-slate-200 font-extrabold text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow">
+                ${numStr}
+              </div>
+            `;
+          }).join('');
+        }
+
+      } catch (e) {
+        console.error("Display fetch error", e);
+      }
+    }
+
+    function connectWS() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      ws.onopen = () => fetchState();
+      ws.onmessage = () => fetchState();
+      ws.onclose = () => setTimeout(connectWS, 2000);
+    }
+
+    connectWS();
+    fetchState();
+    setInterval(fetchState, 4000);
+  </script>
+</body>
+</html>

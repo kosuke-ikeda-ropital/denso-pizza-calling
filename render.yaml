@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: gakusai-pizza-call
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: STAFF_PIN
+        value: 7788 # スタッフ用PINコード（自由に変更可能）

@@ -1,0 +1,83 @@
+{
+  "menu": [
+    {
+      "id": "margherita",
+      "name": "マルゲリータ",
+      "piece_price": 300,
+      "whole_price": 1200,
+      "category": "savory"
+    },
+    {
+      "id": "marinara",
+      "name": "マリナーラ",
+      "piece_price": 250,
+      "whole_price": 1000,
+      "category": "savory"
+    },
+    {
+      "id": "marshmallow",
+      "name": "チョコマシュマロ",
+      "piece_price": 350,
+      "whole_price": 1400,
+      "category": "sweet"
+    },
+    {
+      "id": "apple",
+      "name": "リンゴピザ",
+      "piece_price": 350,
+      "whole_price": 1400,
+      "category": "sweet"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ord_10664745939_1",
+      "number": 1,
+      "items": [
+        {
+          "pizza_id": "margherita",
+          "pizza_name": "マルゲリータ",
+          "size": "piece",
+          "quantity": 2,
+          "unit_price": 300
+        }
+      ],
+      "total_price": 600,
+      "status": "waiting",
+      "created_at": 10664745,
+      "called_at": 10664772,
+      "completed_at": null,
+      "note": ""
+    },
+    {
+      "id": "ord_10664760689_2",
+      "number": 2,
+      "items": [
+        {
+          "pizza_id": "marinara",
+          "pizza_name": "マリナーラ",
+          "size": "piece",
+          "quantity": 1,
+          "unit_price": 250
+        },
+        {
+          "pizza_id": "apple",
+          "pizza_name": "リンゴピザ",
+          "size": "piece",
+          "quantity": 1,
+          "unit_price": 350
+        }
+      ],
+      "total_price": 600,
+      "status": "waiting",
+      "created_at": 10664760,
+      "called_at": null,
+      "completed_at": null,
+      "note": ""
+    }
+  ],
+  "settings": {
+    "shop_name": "学祭ピザスタンド",
+    "max_calling_cards": 30
+  }
+}
