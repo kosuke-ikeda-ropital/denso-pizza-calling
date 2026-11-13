@@ -2,109 +2,81 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ピザ焼き上がり呼出ベル</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>出来上がり状況確認 - 学祭ピザ屋</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @keyframes bounce-slow {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+    @keyframes pulse-soft {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
     }
-    @keyframes pulse-intense {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.7); }
-      50% { transform: scale(1.05); box-shadow: 0 0 30px 10px rgba(234, 88, 12, 0.9); }
-    }
-    @keyframes flash-bg {
-      0% { background-color: #dc2626; box-shadow: 0 0 50px #ef4444; }
-      50% { background-color: #f59e0b; box-shadow: 0 0 80px #fbbf24; }
-      100% { background-color: #ea580c; box-shadow: 0 0 50px #f97316; }
-    }
-    .calling-bg {
-      animation: flash-bg 0.4s infinite alternate;
-    }
-    .calling-card {
-      animation: pulse-intense 1.2s infinite ease-in-out;
-    }
-    .pizza-spin {
-      animation: spin 20s linear infinite;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    .ready-card {
+      animation: pulse-soft 2s infinite ease-in-out;
     }
   </style>
 </head>
 <body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col items-center justify-between p-4 selection:bg-amber-500">
 
   <!-- ヘッダー -->
-  <header class="w-full max-w-md flex items-center justify-between py-2 border-b border-slate-800">
+  <header class="w-full max-w-md flex items-center justify-between py-3 border-b border-slate-800">
     <div class="flex items-center gap-2">
       <span class="text-2xl">🍕</span>
       <span class="font-bold text-amber-400 text-sm tracking-wide" id="shopName">学祭ピザスタンド</span>
     </div>
-    <div id="connStatus" class="text-xs text-slate-400 flex items-center gap-1">
-      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 接続中
-    </div>
+    <button onclick="fetchState()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-1.5 transition active:scale-95">
+      <i class="fa-solid fa-rotate-right" id="refreshIcon"></i> 更新
+    </button>
   </header>
 
-  <!-- 音声・バイブ許可バナー（初回必須） -->
-  <div id="soundPermissionBanner" class="w-full max-w-md my-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-lg flex items-center justify-between border-2 border-amber-300">
-    <div class="flex items-center gap-3">
-      <div class="text-2xl animate-bounce"><i class="fa-solid fa-volume-high"></i></div>
-      <div class="text-xs">
-        <p class="font-black text-sm">通知音をONにしてください</p>
-        <p class="text-amber-100">焼き上がりの呼出音・振動を鳴らせます</p>
-      </div>
-    </div>
-    <button onclick="enableSoundNotification()" class="bg-white text-orange-600 font-extrabold text-xs px-3.5 py-2 rounded-xl shadow active:scale-95 transition">
-      ONにする
-    </button>
-  </div>
-
   <!-- メイン表示領域 -->
-  <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center py-4 text-center">
+  <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center py-6 text-center">
 
     <!-- 番号表示バッジ -->
-    <div class="inline-block bg-slate-800/80 backdrop-blur rounded-2xl px-6 py-2 border border-slate-700 shadow-md mb-4">
-      <span class="text-xs text-slate-400 block font-semibold">お呼び出し番号</span>
+    <div class="inline-block bg-slate-800/90 rounded-2xl px-6 py-2 border border-slate-700 shadow-md mb-5">
+      <span class="text-xs text-slate-400 block font-semibold">あなたのお呼び出し番号</span>
       <span class="text-5xl font-black text-amber-400 tracking-wider" id="displayNumber">--</span>
     </div>
 
     <!-- ステータス動的カード -->
     <div id="statusContainer" class="w-full">
 
-      <!-- 状態1: 焼き中（待機中） -->
-      <div id="stateWaiting" class="bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-700 space-y-5">
-        <div class="relative w-28 h-28 mx-auto flex items-center justify-center">
-          <div class="absolute inset-0 bg-amber-500/20 rounded-full animate-ping"></div>
-          <div class="text-6xl pizza-spin">🍕</div>
-        </div>
+      <!-- 状態1: 焼き中（調理待ち） -->
+      <div id="stateWaiting" class="bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-700 space-y-4">
+        <div class="text-5xl py-2">🔥</div>
         <div>
-          <h2 class="text-2xl font-black text-amber-400 mb-1">おいしく焼き上げ中</h2>
-          <p class="text-slate-300 text-sm leading-relaxed">
-            ピザ窯で丁寧に焼き上げています。<br>焼き上がると画面と音・振動でお知らせします。
+          <span class="inline-block bg-amber-500/20 text-amber-300 font-bold text-xs px-3 py-1 rounded-full mb-2">
+            調理中
+          </span>
+          <h2 class="text-2xl font-black text-white">おいしく焼き上げ中</h2>
+          <p class="text-slate-300 text-sm leading-relaxed mt-2">
+            ピザ窯で丁寧に焼き上げています。<br>
+            焼き上がる頃（約10〜15分後）に、再度このページを開いてご確認ください。
           </p>
         </div>
         <div class="bg-slate-900/60 rounded-xl p-3 text-xs text-slate-400 border border-slate-700/60">
-          💡 この画面を開いたまま、近くでお待ちください
+          💡 スマホを開きっぱなしにする必要はありません。他のブースを見て回りながら、たまにこのページをご確認ください。
         </div>
       </div>
 
-      <!-- 状態2: 焼き上がり！（呼出中・猛烈にアピール） -->
-      <div id="stateCalling" class="hidden calling-bg rounded-3xl p-6 shadow-2xl border-4 border-yellow-300 calling-card space-y-4">
-        <div class="text-6xl animate-bounce">🔔</div>
+      <!-- 状態2: 焼き上がり！（受取可能） -->
+      <div id="stateCalling" class="hidden bg-gradient-to-br from-orange-600 to-amber-600 rounded-3xl p-6 shadow-2xl border-4 border-yellow-300 ready-card space-y-4 text-white">
+        <div class="text-6xl animate-bounce">🍕</div>
         <div>
-          <h2 class="text-3xl font-black text-yellow-200 tracking-tight leading-tight">
-            ピザが焼き上がりました！
+          <span class="inline-block bg-white text-orange-700 font-black text-xs px-3 py-1 rounded-full uppercase tracking-wider mb-2 shadow">
+            Ready to Pick Up!
+          </span>
+          <h2 class="text-3xl font-black tracking-tight leading-tight text-yellow-100">
+            焼き上がりました！
           </h2>
           <p class="text-white text-base font-bold mt-2">
-            受取口（ピザ屋ブース）まで<br>番号札を持ってお越しください！
+            受取口（ピザ屋ブース）まで<br>
+            <span class="text-yellow-200 underline underline-offset-4 font-black">番号札を持ってお越しください</span>
           </p>
         </div>
-        <button onclick="stopAlarm()" class="w-full bg-white text-orange-700 hover:bg-yellow-100 font-black text-lg py-3 rounded-2xl shadow-xl transition transform active:scale-95">
-          <i class="fa-solid fa-person-walking"></i> 今すぐ向かいます (音を止める)
-        </button>
+        <div class="bg-black/20 rounded-2xl p-3 text-xs text-orange-100">
+          ※ 出来立て熱々のうちにお早めにお受け取りください！
+        </div>
       </div>
 
       <!-- 状態3: 受取完了 -->
@@ -112,15 +84,15 @@
         <div class="text-5xl text-emerald-400"><i class="fa-solid fa-circle-check"></i></div>
         <h2 class="text-2xl font-black text-white">受取完了しました</h2>
         <p class="text-slate-300 text-sm leading-relaxed">
-          お受け取りありがとうございます！<br>
-          熱々のおいしいピザをぜひお楽しみください🍕✨
+          お受け取りありがとうございました！<br>
+          熱々のピザをぜひお楽しみください😋✨
         </p>
       </div>
 
-      <!-- 状態4: 注文なし / 終了 -->
+      <!-- 状態4: 注文未登録 / 待機 -->
       <div id="stateNotFound" class="hidden bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-700 space-y-4">
-        <div class="text-4xl text-slate-500"><i class="fa-solid fa-receipt"></i></div>
-        <h2 class="text-lg font-bold text-slate-300">注文の待機中または終了しました</h2>
+        <div class="text-4xl text-slate-500"><i class="fa-solid fa-clock"></i></div>
+        <h2 class="text-lg font-bold text-slate-300">注文の準備中です</h2>
         <p class="text-slate-400 text-xs">
           番号札をお持ちの方は、注文が登録されるまで少々お待ちください。
         </p>
@@ -128,8 +100,8 @@
 
     </div>
 
-    <!-- 注文明細アコーディオン -->
-    <div id="orderItemsBox" class="w-full mt-4 bg-slate-800/60 rounded-2xl p-4 border border-slate-700/80 text-left text-xs hidden">
+    <!-- ご注文明細（確認用） -->
+    <div id="orderItemsBox" class="w-full mt-5 bg-slate-800/60 rounded-2xl p-4 border border-slate-700/80 text-left text-xs hidden">
       <div class="font-bold text-slate-300 mb-2 flex items-center justify-between">
         <span>ご注文内容</span>
         <span id="orderItemsTotal" class="text-amber-400 font-black text-sm"></span>
@@ -142,8 +114,11 @@
   </main>
 
   <!-- フッター -->
-  <footer class="w-full max-w-md text-center py-2 text-slate-500 text-xs">
-    学祭ピザ屋 呼び出しシステム
+  <footer class="w-full max-w-md text-center py-3 text-slate-500 text-xs border-t border-slate-800/80 flex items-center justify-between">
+    <span>学祭ピザ屋 出来上がり確認</span>
+    <span class="text-slate-400 flex items-center gap-1.5" id="liveIndicator">
+      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> リアルタイム連動中
+    </span>
   </footer>
 
   <script>
@@ -153,108 +128,6 @@
 
     const displayNumber = document.getElementById('displayNumber');
     displayNumber.textContent = targetNumber > 0 ? (targetNumber < 10 ? '0' + targetNumber : targetNumber) : '--';
-
-    let audioContext = null;
-    let alarmInterval = null;
-    let soundEnabled = false;
-
-    // 本格フードコート呼び出しベル音 (高周波・倍音付き・高速パルス連打)
-    function playBeep(freq, startTime, duration, type = 'square') {
-      if (!audioContext) return;
-      try {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, startTime);
-        
-        // アタック感のあるエンベロープ
-        gain.gain.setValueAtTime(0.7, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-        
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        
-        osc.start(startTime);
-        osc.stop(startTime + duration);
-      } catch (e) {}
-    }
-
-    function playChime() {
-      if (!audioContext) return;
-      try {
-        const now = audioContext.currentTime;
-        // 人間の耳に一番刺さる2400Hz〜2800Hz帯の高速4連打 (ピピピピッ！)
-        const freq1 = 2600;
-        const freq2 = 3100;
-        
-        // 4連打パルス
-        for (let i = 0; i < 4; i++) {
-          const t = now + i * 0.09;
-          playBeep(freq1, t, 0.06, 'square');
-          playBeep(freq2, t, 0.06, 'sawtooth');
-        }
-
-        // 続けて高音の警報チャイム (ピロリロリン！)
-        const t2 = now + 0.45;
-        for (let i = 0; i < 4; i++) {
-          const t = t2 + i * 0.09;
-          playBeep(freq1 * 1.15, t, 0.06, 'square');
-          playBeep(freq2 * 1.15, t, 0.06, 'sawtooth');
-        }
-      } catch (e) {
-        console.error("Audio error", e);
-      }
-    }
-
-    function triggerVibration() {
-      // Android用（iPhoneはiOSの制限でWeb振動不可のため音でカバー）
-      if ("vibrate" in navigator) {
-        try {
-          navigator.vibrate([200, 80, 200, 80, 200, 80, 400]);
-        } catch (e) {}
-      }
-    }
-
-    function startAlarm() {
-      if (alarmInterval) return;
-      playChime();
-      triggerVibration();
-      // 0.9秒ごとに猛烈連打
-      alarmInterval = setInterval(() => {
-        playChime();
-        triggerVibration();
-      }, 950);
-    }
-
-    function stopAlarm() {
-      if (alarmInterval) {
-        clearInterval(alarmInterval);
-        alarmInterval = null;
-      }
-    }
-
-    let wakeLock = null;
-    async function requestWakeLock() {
-      if ('wakeLock' in navigator) {
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {}
-      }
-    }
-
-    function enableSoundNotification() {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioContext.state === 'suspended') {
-        audioContext.resume();
-      }
-      soundEnabled = true;
-      playChime();
-      triggerVibration();
-      requestWakeLock(); // 自動スリープも可能な限り防止
-      document.getElementById('soundPermissionBanner').classList.add('hidden');
-    }
 
     // UI状態の更新
     function updateStateUI(order) {
@@ -274,7 +147,6 @@
       if (!order) {
         stateNotFound.classList.remove('hidden');
         itemsBox.classList.add('hidden');
-        stopAlarm();
         return;
       }
 
@@ -292,25 +164,26 @@
 
       if (order.status === 'waiting') {
         stateWaiting.classList.remove('hidden');
-        stopAlarm();
       } else if (order.status === 'calling') {
         stateCalling.classList.remove('hidden');
-        startAlarm();
       } else if (order.status === 'completed') {
         stateCompleted.classList.remove('hidden');
-        stopAlarm();
       } else {
         stateNotFound.classList.remove('hidden');
-        stopAlarm();
       }
     }
 
     // データ取得
     async function fetchState() {
+      const icon = document.getElementById('refreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+
       if (targetNumber <= 0) {
         updateStateUI(null);
+        if (icon) icon.classList.remove('fa-spin');
         return;
       }
+
       try {
         const res = await fetch('/api/state');
         if (!res.ok) return;
@@ -320,12 +193,10 @@
           document.getElementById('shopName').textContent = data.settings.shop_name;
         }
 
-        // 最新の該当注文を探す（未完了優先）
         const matchingOrders = data.orders.filter(o => o.number === targetNumber);
         if (matchingOrders.length === 0) {
           updateStateUI(null);
         } else {
-          // waiting または calling があればそれを優先、なければ最新の completed
           const active = matchingOrders.find(o => o.status === 'calling' || o.status === 'waiting');
           if (active) {
             updateStateUI(active);
@@ -335,59 +206,38 @@
         }
       } catch (e) {
         console.error("fetchState error", e);
+      } finally {
+        if (icon) setTimeout(() => icon.classList.remove('fa-spin'), 400);
       }
     }
 
-    // WebSocket接続
+    // WebSocket接続（画面を開いている間はリアルタイムに自動更新）
     function connectWS() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
       ws.onopen = () => {
-        document.getElementById('connStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 接続中';
+        document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> リアルタイム連動中';
         fetchState();
       };
 
-      ws.onmessage = (event) => {
-        fetchState();
-      };
+      ws.onmessage = () => fetchState();
 
       ws.onclose = () => {
-        document.getElementById('connStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> 再接続中...';
-        setTimeout(connectWS, 2000);
-      };
-
-      ws.onerror = () => {
-        ws.close();
+        document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-500"></span> 自動更新待機中';
+        setTimeout(connectWS, 3000);
       };
     }
+
+    // 画面を開き直したとき・タブに戻ったときに即座に最新化
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') fetchState();
+    });
+    window.addEventListener('pageshow', fetchState);
 
     // 初期化
     connectWS();
     fetchState();
-    // フォールバックポーリング (5秒おき)
-    setInterval(fetchState, 5000);
-
-    // ========================================================
-    // 画面復帰時の即時チェック＆爆音トリガー (スリープ解除対策)
-    // ========================================================
-    async function handleScreenResume() {
-      if (document.visibilityState === 'visible') {
-        // AudioContextの停止を解除
-        if (audioContext && audioContext.state === 'suspended') {
-          try {
-            await audioContext.resume();
-          } catch (e) {}
-        }
-        // 即座に最新状態を取得
-        await fetchState();
-      }
-    }
-
-    // 画面点灯・タブ復帰・ロック解除イベントを全網羅で監視
-    document.addEventListener('visibilitychange', handleScreenResume);
-    window.addEventListener('focus', handleScreenResume);
-    window.addEventListener('pageshow', handleScreenResume);
   </script>
 </body>
 </html>
