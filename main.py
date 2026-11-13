@@ -7,7 +7,10 @@ import os
 import asyncio
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Depends
-from fastapi.responses import HTMLResponse, JSONResponse
+import io
+import csv
+import datetime
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -223,6 +226,91 @@ async def reset_orders(authorized: bool = Depends(verify_staff_pin)):
     save_data(data)
     await manager.broadcast({"type": "orders_reset"})
     return {"status": "ok"}
+
+@app.get("/api/export_csv")
+def export_csv(pin: Optional[str] = None, x_staff_pin: Optional[str] = Header(None)):
+    """売上・注文履歴をExcelで開けるCSV(BOM付きUTF-8)でダウンロード"""
+    auth_pin = x_staff_pin or pin
+    verify_staff_pin(auth_pin)
+
+    data = load_data()
+    orders = data.get("orders", [])
+
+    output = io.StringIO()
+    # 日本語Excel対応: BOMを出力
+    output.write('\ufeff')
+    writer = csv.writer(output)
+
+    # ヘッダー行
+    writer.writerow(["注文ID", "注文日時", "整理番号", "商品名", "サイズ", "数量", "単価(円)", "小計(円)", "注文合計金額(円)", "ステータス", "備考"])
+
+    # 状態の日本語変換マップ
+    status_map = {
+        "waiting": "調理中(焼き待ち)",
+        "calling": "呼出中",
+        "completed": "受取完了",
+        "cancelled": "キャンセル"
+    }
+
+    total_sales = 0
+
+    for o in orders:
+        created_time_str = ""
+        if o.get("created_at"):
+            try:
+                dt = datetime.datetime.fromtimestamp(o["created_at"])
+                created_time_str = dt.strftime("%Y/%m/%d %H:%M:%S")
+            except Exception:
+                created_time_str = str(o["created_at"])
+
+        num_str = f"{o['number']:02d}"
+        status_str = status_map.get(o.get("status"), o.get("status", ""))
+        order_total = o.get("total_price", 0)
+        if o.get("status") == "completed":
+            total_sales += order_total
+
+        items = o.get("items", [])
+        if not items:
+            writer.writerow([
+                o["id"], created_time_str, num_str, "(なし)", "-", 0, 0, 0, order_total, status_str, o.get("note", "")
+            ])
+        else:
+            for idx, item in enumerate(items):
+                size_str = "ピース" if item.get("size") == "piece" else "ホール"
+                qty = item.get("quantity", 0)
+                price = item.get("unit_price", 0)
+                subtotal = qty * price
+                # 最初の行にだけ注文合計を表示
+                displayed_order_total = order_total if idx == 0 else ""
+                displayed_note = o.get("note", "") if idx == 0 else ""
+
+                writer.writerow([
+                    o["id"],
+                    created_time_str,
+                    num_str,
+                    item.get("pizza_name", ""),
+                    size_str,
+                    qty,
+                    price,
+                    subtotal,
+                    displayed_order_total,
+                    status_str,
+                    displayed_note
+                ])
+
+    # 最終集計行
+    writer.writerow([])
+    writer.writerow(["【売上集計】", "", "", "", "", "", "受取完了売上合計", f"¥{total_sales:,}"])
+
+    output.seek(0)
+    csv_bytes = output.getvalue().encode('utf-8-sig')
+
+    filename = f"pizza_sales_{datetime.date.today().strftime('%Y%m%d')}.csv"
+    return Response(
+        content=csv_bytes,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 # --- WebSocket ---
 @app.websocket("/ws")

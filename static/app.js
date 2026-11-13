@@ -575,6 +575,16 @@ async function confirmResetOrders() {
   }
 }
 
+function exportSalesCsv() {
+  if (!currentStaffPin) {
+    alert('スタッフ認証が必要です');
+    logoutStaff();
+    return;
+  }
+  // PIN付きでダウンロードリンクを開く
+  window.location.href = `/api/export_csv?pin=${encodeURIComponent(currentStaffPin)}`;
+}
+
 // 初期実行
 checkAuth();
 connectWebSocket();
