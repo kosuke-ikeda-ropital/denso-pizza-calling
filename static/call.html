@@ -16,11 +16,12 @@
       50% { transform: scale(1.05); box-shadow: 0 0 30px 10px rgba(234, 88, 12, 0.9); }
     }
     @keyframes flash-bg {
-      0%, 100% { background-color: #ea580c; }
-      50% { background-color: #f97316; }
+      0% { background-color: #dc2626; box-shadow: 0 0 50px #ef4444; }
+      50% { background-color: #f59e0b; box-shadow: 0 0 80px #fbbf24; }
+      100% { background-color: #ea580c; box-shadow: 0 0 50px #f97316; }
     }
     .calling-bg {
-      animation: flash-bg 1s infinite alternate;
+      animation: flash-bg 0.4s infinite alternate;
     }
     .calling-card {
       animation: pulse-intense 1.2s infinite ease-in-out;
@@ -157,34 +158,59 @@
     let alarmInterval = null;
     let soundEnabled = false;
 
-    // Web Audio APIによるチャイム音生成
-    function playChime() {
+    // 本格フードコート呼び出しベル音 (高周波・倍音付き・高速パルス連打)
+    function playBeep(freq, startTime, duration, type = 'square') {
       if (!audioContext) return;
       try {
         const osc = audioContext.createOscillator();
         const gain = audioContext.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, startTime);
+        
+        // アタック感のあるエンベロープ
+        gain.gain.setValueAtTime(0.7, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        
         osc.connect(gain);
         gain.connect(audioContext.destination);
+        
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      } catch (e) {}
+    }
 
+    function playChime() {
+      if (!audioContext) return;
+      try {
         const now = audioContext.currentTime;
-        // ファ音(698Hz) -> ド音(523Hz) のようなチャイム
-        osc.frequency.setValueAtTime(880, now);
-        osc.frequency.setValueAtTime(659, now + 0.25);
+        // 人間の耳に一番刺さる2400Hz〜2800Hz帯の高速4連打 (ピピピピッ！)
+        const freq1 = 2600;
+        const freq2 = 3100;
+        
+        // 4連打パルス
+        for (let i = 0; i < 4; i++) {
+          const t = now + i * 0.09;
+          playBeep(freq1, t, 0.06, 'square');
+          playBeep(freq2, t, 0.06, 'sawtooth');
+        }
 
-        gain.gain.setValueAtTime(0.3, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-
-        osc.start(now);
-        osc.stop(now + 0.8);
+        // 続けて高音の警報チャイム (ピロリロリン！)
+        const t2 = now + 0.45;
+        for (let i = 0; i < 4; i++) {
+          const t = t2 + i * 0.09;
+          playBeep(freq1 * 1.15, t, 0.06, 'square');
+          playBeep(freq2 * 1.15, t, 0.06, 'sawtooth');
+        }
       } catch (e) {
         console.error("Audio error", e);
       }
     }
 
     function triggerVibration() {
+      // Android用（iPhoneはiOSの制限でWeb振動不可のため音でカバー）
       if ("vibrate" in navigator) {
         try {
-          navigator.vibrate([500, 200, 500, 200, 500]);
+          navigator.vibrate([200, 80, 200, 80, 200, 80, 400]);
         } catch (e) {}
       }
     }
@@ -193,10 +219,11 @@
       if (alarmInterval) return;
       playChime();
       triggerVibration();
+      // 0.9秒ごとに猛烈連打
       alarmInterval = setInterval(() => {
         playChime();
         triggerVibration();
-      }, 1500);
+      }, 950);
     }
 
     function stopAlarm() {
