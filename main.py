@@ -24,7 +24,12 @@ DEFAULT_DATA = {
         {"id": "margherita", "name": "マルゲリータ", "piece_price": 300, "whole_price": 1200, "category": "savory"},
         {"id": "marinara", "name": "マリナーラ", "piece_price": 250, "whole_price": 1000, "category": "savory"},
         {"id": "marshmallow", "name": "チョコマシュマロ", "piece_price": 350, "whole_price": 1400, "category": "sweet"},
-        {"id": "apple", "name": "リンゴピザ", "piece_price": 350, "whole_price": 1400, "category": "sweet"},
+        {"id": "apple_cinnamon", "name": "アップルシナモン", "piece_price": 350, "whole_price": 1400, "category": "sweet"},
+        {"id": "quattro_formaggi", "name": "[限定]クアトロフォルマッジ", "piece_price": 400, "whole_price": 1600, "category": "limited"},
+        {"id": "discount_margherita", "name": "[割引]マルゲリータ", "piece_price": 250, "whole_price": 1000, "category": "discount"},
+        {"id": "discount_marinara", "name": "[割引]マリナーラ", "piece_price": 200, "whole_price": 800, "category": "discount"},
+        {"id": "discount_marshmallow", "name": "[割引]チョコマシュマロ", "piece_price": 300, "whole_price": 1200, "category": "discount"},
+        {"id": "discount_apple_cinnamon", "name": "[割引]アップルシナモン", "piece_price": 300, "whole_price": 1200, "category": "discount"},
     ],
     "orders": [], # List of orders
     "settings": {
