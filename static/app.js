@@ -367,10 +367,23 @@ function renderOrderMenuGrid() {
     const pieceQty = currentOrderSelection[pieceKey] || 0;
     const wholeQty = currentOrderSelection[wholeKey] || 0;
 
+    let badge = '';
+    let cardClass = 'bg-slate-50 border-slate-200';
+    if (pizza.name.includes('[限定]')) {
+      badge = '<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded ml-1">限定</span>';
+      cardClass = 'bg-amber-50/50 border-amber-300';
+    } else if (pizza.name.includes('[割引]')) {
+      badge = '<span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded ml-1">割引</span>';
+      cardClass = 'bg-rose-50/40 border-rose-200';
+    }
+
     return `
-      <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
-          <span class="font-bold text-slate-800 text-sm">🍕 ${pizza.name}</span>
+      <div class="${cardClass} border rounded-xl p-3 flex flex-col justify-between shadow-sm">
+        <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200/80">
+          <span class="font-bold text-slate-800 text-xs sm:text-sm flex items-center">
+            🍕 ${pizza.name}
+          </span>
+          ${badge}
         </div>
 
         <div class="space-y-2">
@@ -378,12 +391,12 @@ function renderOrderMenuGrid() {
           <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
             <div>
               <span class="font-bold text-slate-700">ピース</span>
-              <span class="text-slate-500 ml-1">¥${pizza.piece_price}</span>
+              <span class="text-slate-500 ml-1 font-semibold">¥${pizza.piece_price}</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <button type="button" onclick="changeQuantity('${pieceKey}', -1)" class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center">-</button>
+              <button type="button" onclick="changeQuantity('${pieceKey}', -1)" class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center transition active:scale-90">-</button>
               <span class="w-5 text-center font-bold text-slate-800" id="qty_${pieceKey}">${pieceQty}</span>
-              <button type="button" onclick="changeQuantity('${pieceKey}', 1)" class="w-6 h-6 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold flex items-center justify-center">+</button>
+              <button type="button" onclick="changeQuantity('${pieceKey}', 1)" class="w-6 h-6 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold flex items-center justify-center transition active:scale-90">+</button>
             </div>
           </div>
 
@@ -391,12 +404,12 @@ function renderOrderMenuGrid() {
           <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
             <div>
               <span class="font-bold text-slate-700">ホール (1枚)</span>
-              <span class="text-slate-500 ml-1">¥${pizza.whole_price}</span>
+              <span class="text-slate-500 ml-1 font-semibold">¥${pizza.whole_price}</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <button type="button" onclick="changeQuantity('${wholeKey}', -1)" class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center">-</button>
+              <button type="button" onclick="changeQuantity('${wholeKey}', -1)" class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center transition active:scale-90">-</button>
               <span class="w-5 text-center font-bold text-slate-800" id="qty_${wholeKey}">${wholeQty}</span>
-              <button type="button" onclick="changeQuantity('${wholeKey}', 1)" class="w-6 h-6 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold flex items-center justify-center">+</button>
+              <button type="button" onclick="changeQuantity('${wholeKey}', 1)" class="w-6 h-6 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold flex items-center justify-center transition active:scale-90">+</button>
             </div>
           </div>
         </div>
@@ -498,23 +511,36 @@ async function submitOrder() {
 
 function openMenuModal() {
   const container = document.getElementById('menuEditList');
-  container.innerHTML = appState.menu.map((pizza, idx) => `
-    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-      <div class="flex items-center justify-between">
-        <span class="font-bold text-slate-800 text-sm">🍕 ${pizza.name}</span>
-      </div>
-      <div class="grid grid-cols-2 gap-3 text-xs">
-        <div>
-          <label class="block text-slate-600 font-semibold mb-1">ピース価格 (¥)</label>
-          <input type="number" id="menu_piece_${idx}" value="${pizza.piece_price}" class="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-800 focus:border-amber-500 focus:outline-none">
+  container.innerHTML = appState.menu.map((pizza, idx) => {
+    let badge = '';
+    let cardClass = 'bg-slate-50 border-slate-200';
+    if (pizza.name.includes('[限定]')) {
+      badge = '<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded">限定</span>';
+      cardClass = 'bg-amber-50/50 border-amber-300';
+    } else if (pizza.name.includes('[割引]')) {
+      badge = '<span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded">割引</span>';
+      cardClass = 'bg-rose-50/40 border-rose-200';
+    }
+
+    return `
+      <div class="p-3 ${cardClass} border rounded-xl space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-slate-800 text-sm">🍕 ${pizza.name}</span>
+          ${badge}
         </div>
-        <div>
-          <label class="block text-slate-600 font-semibold mb-1">ホール価格 (¥)</label>
-          <input type="number" id="menu_whole_${idx}" value="${pizza.whole_price}" class="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-800 focus:border-amber-500 focus:outline-none">
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-600 font-semibold mb-1">ピース価格 (¥)</label>
+            <input type="number" id="menu_piece_${idx}" value="${pizza.piece_price}" class="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-800 focus:border-amber-500 focus:outline-none bg-white">
+          </div>
+          <div>
+            <label class="block text-slate-600 font-semibold mb-1">ホール価格 (¥)</label>
+            <input type="number" id="menu_whole_${idx}" value="${pizza.whole_price}" class="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-800 focus:border-amber-500 focus:outline-none bg-white">
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   document.getElementById('menuModal').classList.remove('hidden');
 }

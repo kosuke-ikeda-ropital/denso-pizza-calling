@@ -149,7 +149,7 @@
 
   <!-- ==================== モーダル1: 新規注文登録 ==================== -->
   <div id="orderModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
       <div class="bg-emerald-600 text-white px-6 py-4 flex items-center justify-between">
         <h3 class="text-xl font-bold flex items-center gap-2">
           <i class="fa-solid fa-cart-plus"></i> 新規注文登録
@@ -173,12 +173,12 @@
           </div>
         </div>
 
-        <!-- ピザメニュー選択 (4種 × 2サイズ) -->
+        <!-- ピザメニュー選択 (9種 × 2サイズ) -->
         <div>
           <label class="block text-sm font-bold text-slate-700 mb-2">
             2. 注文内容を選択
           </label>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="orderMenuGrid">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="orderMenuGrid">
             <!-- JSで動的生成 -->
           </div>
         </div>
@@ -205,7 +205,7 @@
 
   <!-- ==================== モーダル2: メニュー・価格設定 ==================== -->
   <div id="menuModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
       <div class="bg-amber-700 text-white px-6 py-4 flex items-center justify-between">
         <h3 class="text-xl font-bold flex items-center gap-2">
           <i class="fa-solid fa-sliders"></i> ピザメニュー・価格設定
@@ -218,7 +218,7 @@
           各ピザの「ピース」および「ホール」の販売価格をいつでも変更できます。変更後は即時反映されます。
         </p>
 
-        <div id="menuEditList" class="space-y-4">
+        <div id="menuEditList" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <!-- JSで動的生成 -->
         </div>
       </div>
